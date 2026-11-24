@@ -42,6 +42,22 @@ class PipelineCallback(ConfigMixin):
     def __call__(self, pipeline, step_index, timestep, callback_kwargs) -> Dict[str, Any]:
         return self.callback_fn(pipeline, step_index, timestep, callback_kwargs)
 
+    def _get_cutoff_step(self, pipeline) -> int:
+        """
+        Compute the cutoff step based on `cutoff_step_ratio` or `cutoff_step_index`.
+
+        Args:
+            pipeline: The pipeline instance, used to access `num_timesteps`.
+
+        Returns:
+            The computed cutoff step index.
+        """
+        cutoff_step_index = self.config.cutoff_step_index
+        if cutoff_step_index is not None:
+            return cutoff_step_index
+        cutoff_step_ratio = self.config.cutoff_step_ratio
+        return int(pipeline.num_timesteps * cutoff_step_ratio)
+
 
 class MultiPipelineCallbacks:
     """
@@ -77,13 +93,7 @@ class SDCFGCutoffCallback(PipelineCallback):
     tensor_inputs = ["prompt_embeds"]
 
     def callback_fn(self, pipeline, step_index, timestep, callback_kwargs) -> Dict[str, Any]:
-        cutoff_step_ratio = self.config.cutoff_step_ratio
-        cutoff_step_index = self.config.cutoff_step_index
-
-        # Use cutoff_step_index if it's not None, otherwise use cutoff_step_ratio
-        cutoff_step = (
-            cutoff_step_index if cutoff_step_index is not None else int(pipeline.num_timesteps * cutoff_step_ratio)
-        )
+        cutoff_step = self._get_cutoff_step(pipeline)
 
         if step_index == cutoff_step:
             prompt_embeds = callback_kwargs[self.tensor_inputs[0]]
@@ -110,13 +120,7 @@ class SDXLCFGCutoffCallback(PipelineCallback):
     ]
 
     def callback_fn(self, pipeline, step_index, timestep, callback_kwargs) -> Dict[str, Any]:
-        cutoff_step_ratio = self.config.cutoff_step_ratio
-        cutoff_step_index = self.config.cutoff_step_index
-
-        # Use cutoff_step_index if it's not None, otherwise use cutoff_step_ratio
-        cutoff_step = (
-            cutoff_step_index if cutoff_step_index is not None else int(pipeline.num_timesteps * cutoff_step_ratio)
-        )
+        cutoff_step = self._get_cutoff_step(pipeline)
 
         if step_index == cutoff_step:
             prompt_embeds = callback_kwargs[self.tensor_inputs[0]]
@@ -153,13 +157,7 @@ class SDXLControlnetCFGCutoffCallback(PipelineCallback):
     ]
 
     def callback_fn(self, pipeline, step_index, timestep, callback_kwargs) -> Dict[str, Any]:
-        cutoff_step_ratio = self.config.cutoff_step_ratio
-        cutoff_step_index = self.config.cutoff_step_index
-
-        # Use cutoff_step_index if it's not None, otherwise use cutoff_step_ratio
-        cutoff_step = (
-            cutoff_step_index if cutoff_step_index is not None else int(pipeline.num_timesteps * cutoff_step_ratio)
-        )
+        cutoff_step = self._get_cutoff_step(pipeline)
 
         if step_index == cutoff_step:
             prompt_embeds = callback_kwargs[self.tensor_inputs[0]]
@@ -196,13 +194,7 @@ class IPAdapterScaleCutoffCallback(PipelineCallback):
     tensor_inputs = []
 
     def callback_fn(self, pipeline, step_index, timestep, callback_kwargs) -> Dict[str, Any]:
-        cutoff_step_ratio = self.config.cutoff_step_ratio
-        cutoff_step_index = self.config.cutoff_step_index
-
-        # Use cutoff_step_index if it's not None, otherwise use cutoff_step_ratio
-        cutoff_step = (
-            cutoff_step_index if cutoff_step_index is not None else int(pipeline.num_timesteps * cutoff_step_ratio)
-        )
+        cutoff_step = self._get_cutoff_step(pipeline)
 
         if step_index == cutoff_step:
             pipeline.set_ip_adapter_scale(0.0)
