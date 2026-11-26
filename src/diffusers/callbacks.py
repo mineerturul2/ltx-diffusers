@@ -183,6 +183,29 @@ class SDXLControlnetCFGCutoffCallback(PipelineCallback):
         return callback_kwargs
 
 
+class SD3CFGCutoffCallback(PipelineCallback):
+    """
+    Callback function for Stable Diffusion 3 Pipelines. After certain number of steps (set by `cutoff_step_ratio` or
+    `cutoff_step_index`), this callback will disable the CFG.
+
+    Note: This callback mutates the pipeline by changing the `_guidance_scale` attribute to 0.0 after the cutoff step.
+    """
+
+    tensor_inputs = ["prompt_embeds"]
+
+    def callback_fn(self, pipeline, step_index, timestep, callback_kwargs) -> Dict[str, Any]:
+        cutoff_step = self._get_cutoff_step(pipeline)
+
+        if step_index == cutoff_step:
+            prompt_embeds = callback_kwargs[self.tensor_inputs[0]]
+            prompt_embeds = prompt_embeds[-1:]  # "-1" denotes the embeddings for conditional text tokens.
+
+            pipeline._guidance_scale = 0.0
+
+            callback_kwargs[self.tensor_inputs[0]] = prompt_embeds
+        return callback_kwargs
+
+
 class IPAdapterScaleCutoffCallback(PipelineCallback):
     """
     Callback function for any pipeline that inherits `IPAdapterMixin`. After certain number of steps (set by
