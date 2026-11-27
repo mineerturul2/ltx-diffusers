@@ -168,6 +168,29 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
     def set_shift(self, shift: float):
         self._shift = shift
 
+    def scale_model_input(self, sample: torch.Tensor, timestep: Union[float, torch.Tensor]) -> torch.Tensor:
+        """
+        Ensures interchangeability with schedulers that need to scale the denoising model input depending on the
+        current timestep.
+
+        Flow matching is defined on a straight path between the noise and the data, so the model input is not scaled.
+        This method only initializes the step index (as every other scheduler does) and returns the input unchanged.
+
+        Args:
+            sample (`torch.Tensor`):
+                The input sample.
+            timestep (`float` or `torch.Tensor`):
+                The current timestep in the diffusion chain.
+
+        Returns:
+            `torch.Tensor`:
+                A scaled input sample.
+        """
+        if self.step_index is None:
+            self._init_step_index(timestep)
+
+        return sample
+
     def scale_noise(
         self,
         sample: torch.FloatTensor,
